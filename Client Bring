@@ -1,0 +1,62 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LOOP_BRING_KEY = Enum.KeyCode.F
+
+local isLoopBringing = false
+
+local function teleportPlayer(player, destination)
+    if player and destination then
+        player.Character:SetPrimaryPartCFrame(destination)
+    end
+end
+
+local function getCursorPosition()
+    local mouse = Players.LocalPlayer:GetMouse()
+    return mouse and mouse.Hit and mouse.Hit.p
+end
+
+local function findNearestPlayer(position)
+    local nearestPlayer = nil
+    local minDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character then
+            local distance = (player.Character:GetPrimaryPartCFrame().p - position).magnitude
+            if distance < minDistance then
+                nearestPlayer = player
+                minDistance = distance
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function loopBring()
+    local localPlayer = Players.LocalPlayer
+    local cursorPosition = getCursorPosition()
+    if cursorPosition then
+        local nearestPlayer = findNearestPlayer(cursorPosition)
+        if nearestPlayer then
+            local direction = (cursorPosition - localPlayer.Character:GetPrimaryPartCFrame().p).unit
+            local destination = localPlayer.Character:GetPrimaryPartCFrame().p + direction * 5 -- Adjust the distance in front of the player
+            teleportPlayer(nearestPlayer, CFrame.new(destination))
+            print("Player " .. nearestPlayer.Name .. " has been brought in front of you.")
+        end
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == LOOP_BRING_KEY then
+        isLoopBringing = not isLoopBringing
+        print("Loop bring mode is now " .. (isLoopBringing and "enabled" or "disabled"))
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if isLoopBringing then
+        loopBring()
+    end
+end)
