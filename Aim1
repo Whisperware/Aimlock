@@ -1,0 +1,283 @@
+local Area = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+local MyView = Area.CurrentCamera
+local MyTeamColor = LocalPlayer.TeamColor
+local HoldingM2 = false
+local Active = false
+local Lock = false
+local Epitaph = 0.167 ---Note: The Bigger The Number, The More Prediction.
+local HeadOffset = Vector3.new(0, .1, 0)
+
+local Current_Player_ESP_Folder = nil
+
+if CoreGui:FindFirstChild("Current_Player_ESP_Folder") then
+    Current_Player_ESP_Folder = CoreGui:FindFirstChild("Current_Player_ESP_Folder")
+elseif not CoreGui:FindFirstChild("Current_Player_ESP_Folder") then
+    Current_Player_ESP_Folder = Instance.new("Folder")
+    Current_Player_ESP_Folder.Name = "Current_Player_ESP_Folder"
+    Current_Player_ESP_Folder.Parent = CoreGui
+end
+
+_G.Character_Find_Method = 2
+
+-- Method 1: Find nearest
+-- Method 2: Find nearest player to mouse
+
+_G.TeamCheck = false
+_G.Player_ESP = false
+_G.PredictUserMovement = true
+_G.FOV_Radius = 100
+_G.AimPart = "Head"
+
+_G.Addon_Status = false
+-- You may need to rejoin the experience and
+-- re-excute if you changed the current addon.
+if _G.Addon_Status == true then
+    _G.TeamCheck = false
+end
+
+_G.Sensitivity = 0
+_G.CircleSides = 64
+_G.CircleColor = Color3.fromRGB(255, 0, 130)
+_G.CircleTransparency = 100
+_G.CircleFilled = false
+_G.CircleVisible = true
+_G.CircleThickness = 1
+
+local function CursorLock()
+    UIS.MouseBehavior = Enum.MouseBehavior.LockCenter
+end
+local function UnLockCursor()
+    HoldingM2 = false Active = false Lock = false 
+    UIS.MouseBehavior = Enum.MouseBehavior.Default
+end
+function FindNearestPlayer()
+    local dist = math.huge
+    local Target = nil
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= LocalPlayer and v.Character:FindFirstChild("Humanoid") and v.Character:FindFirstChild("Humanoid").Health > 0 and v.Character:FindFirstChild("HumanoidRootPart") and v then
+            if _G.TeamCheck == true then
+                if v.Team ~= LocalPlayer.Team then
+                    local TheirCharacter = v.Character
+                    local CharacterRoot, Visible = MyView:WorldToViewportPoint(TheirCharacter[_G.AimPart].Position)
+                    if Visible then
+                        local RealMag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(CharacterRoot.X, CharacterRoot.Y)).Magnitude
+                        if RealMag < dist and RealMag < _G.FOV_Radius then
+                            dist = RealMag
+                            Target = TheirCharacter
+                        end
+                    end
+                end
+            elseif _G.Addon_Status == true then
+                -- Lua script here
+                --//\\--
+                local TheirCharacter = v.Character
+                local CharacterRoot, Visible = MyView:WorldToViewportPoint(TheirCharacter[_G.AimPart].Position)
+                if Visible then
+                    local RealMag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(CharacterRoot.X, CharacterRoot.Y)).Magnitude
+                    if RealMag < dist and RealMag < _G.FOV_Radius then
+                        dist = RealMag
+                        Target = TheirCharacter
+                    end
+                end
+                --//\\--
+            else
+                local TheirCharacter = v.Character
+                local CharacterRoot, Visible = MyView:WorldToViewportPoint(TheirCharacter[_G.AimPart].Position)
+                if Visible then
+                    local RealMag = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(CharacterRoot.X, CharacterRoot.Y)).Magnitude
+                    if RealMag < dist and RealMag < _G.FOV_Radius then
+                        dist = RealMag
+                        Target = TheirCharacter
+                    end
+                end
+            end
+        end
+    end
+    return Target
+end
+
+
+function GetClosestPlayerToMouse()
+   local target, mag = nil, _G.FOV_Radius
+   for i,v in pairs(Players:GetPlayers()) do
+        if _G.TeamCheck == true then
+            if (v.Character and v.Character:FindFirstChild(_G.AimPart) and v ~= LocalPlayer and v.Team ~= LocalPlayer.Team and v.Character:FindFirstChildOfClass("Humanoid").Health ~= 0) then
+                local pos, onscreen = MyView:WorldToViewportPoint(v.Character[_G.AimPart].Position)
+                if (onscreen) then
+                    local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if (dist < mag) then
+                        target = v.Character
+                        mag = dist
+                    end
+                end
+            end
+        elseif _G.TeamCheck == false then
+            if (v.Character and v.Character:FindFirstChild(_G.AimPart) and v ~= LocalPlayer and v.Character:FindFirstChildOfClass("Humanoid").Health ~= 0) then
+                local pos, onscreen = MyView:WorldToViewportPoint(v.Character[_G.AimPart].Position)
+                if (onscreen) then
+                    local dist = (Vector2.new(Mouse.X, Mouse.Y) - Vector2.new(pos.X, pos.Y)).Magnitude
+                    if (dist < mag) then
+                        target = v.Character
+                        mag = dist
+                    end
+                end
+            end
+        end
+   end
+   if target ~= nil then
+       return target
+   else
+       return nil
+   end
+end
+
+UIS.InputBegan:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton2 then
+        HoldingM2 = true
+        Active = true
+        Lock = true
+        if Active then
+            local The_Enemy = nil
+            
+            if _G.Character_Find_Method == 1 then
+                The_Enemy = FindNearestPlayer()
+            elseif _G.Character_Find_Method == 2 then
+                The_Enemy = GetClosestPlayerToMouse()
+            end
+            while HoldingM2 do task.wait(.000001)
+                if Lock and The_Enemy ~= nil then
+                    local Future = nil
+                    if _G.PredictUserMovement == true then
+                        Future = The_Enemy[_G.AimPart].CFrame + (The_Enemy[_G.AimPart].Velocity * Epitaph + HeadOffset)
+                    elseif _G.PredictUserMovement == false then
+                        Future = The_Enemy[_G.AimPart].CFrame
+                    end
+                    MyView.CFrame = CFrame.lookAt(MyView.CFrame.Position, Future.Position)
+                    CursorLock()
+                end
+            end
+        end
+    end
+end)
+UIS.InputEnded:Connect(function(Input)
+    if Input.UserInputType == Enum.UserInputType.MouseButton2 then
+        UnLockCursor()
+    end
+end)
+
+UIS.InputBegan:Connect(function(input, gameProcessedEvent)
+    if gameProcessedEvent then return end
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == Enum.KeyCode.Z then
+            _G.TeamCheck = not _G.TeamCheck
+            game.StarterGui:SetCore("SendNotification", {
+				Title = "Aimbot"; --the notifications
+				Text = "Teamcheck: " ..tostring(_G.TeamCheck); 
+				Duration = 2;
+			})
+        end
+        if input.KeyCode == Enum.KeyCode.C then
+            _G.Player_ESP = not _G.Player_ESP
+            game.StarterGui:SetCore("SendNotification", {
+				Title = "Aimbot"; --the notifications
+				Text = "ESP: " ..tostring(_G.Player_ESP); 
+				Duration = 2;
+			})
+        end
+        if input.KeyCode == Enum.KeyCode.X then
+            _G.PredictUserMovement = not _G.PredictUserMovement
+            game.StarterGui:SetCore("SendNotification", {
+				Title = "Aimbot"; --the notifications
+				Text = "Predict movement: " ..tostring(_G.PredictUserMovement); 
+				Duration = 2;
+			})
+        end
+    end
+end)
+
+local GetMouseLocation = UIS.GetMouseLocation
+
+game:GetService("RunService").RenderStepped:Connect(function()
+    if _G.Player_ESP == true then
+        for i, v in pairs(Current_Player_ESP_Folder:GetChildren()) do
+            local CheckIfExist = v
+            if not Players:FindFirstChild(CheckIfExist.Name) then
+                CheckIfExist:Destroy()
+            end
+        end
+        for i, v in pairs(Players:GetChildren()) do
+            if v ~= LocalPlayer then
+                if v.Character ~= nil then
+                    if v.Character:FindFirstChild(_G.AimPart) then
+                        if _G.TeamCheck == true then
+                            if v.Team ~= LocalPlayer.Team then
+                                if Current_Player_ESP_Folder:FindFirstChild(v.Name) then
+                                    Current_Player_ESP_Folder:FindFirstChild(v.Name):Destroy()
+                                end
+                                if not Current_Player_ESP_Folder:FindFirstChild(v.Name) then
+                                    local EspBillBoard = Instance.new("BillboardGui")
+                                    EspBillBoard.Adornee = v.Character:WaitForChild(_G.AimPart, math.huge)
+                                    EspBillBoard.Name = v.Name
+                                    EspBillBoard.Size = UDim2.new(0, 100, 0, 150)
+                                    EspBillBoard.StudsOffset = Vector3.new(0, 1, 0)
+                                    EspBillBoard.AlwaysOnTop = true
+                                    EspBillBoard.Parent = Current_Player_ESP_Folder
+                                    
+                                    local BillBoardText = Instance.new("TextLabel")
+                                    BillBoardText.BackgroundTransparency = 1
+                                    BillBoardText.Position = UDim2.new(0, 0, 0, -50)
+                                    BillBoardText.Size = UDim2.new(0, 100, 0, 100)
+                                    BillBoardText.Font = Enum.Font.SourceSansSemibold
+                                    BillBoardText.TextSize = 20
+                                    BillBoardText.TextColor3 = v.TeamColor.Color
+                                    BillBoardText.TextStrokeTransparency = 0
+                                    BillBoardText.TextYAlignment = Enum.TextYAlignment.Bottom
+                                    BillBoardText.Text = v.Name
+                                    BillBoardText.ZIndex = 10
+                                    BillBoardText.Parent = EspBillBoard
+                                end
+                            end
+                        elseif _G.TeamCheck == false then
+                            if Current_Player_ESP_Folder:FindFirstChild(v.Name) then
+                                Current_Player_ESP_Folder:FindFirstChild(v.Name):Destroy()
+                            end
+                            if not Current_Player_ESP_Folder:FindFirstChild(v.Name) then
+                                local EspBillBoard = Instance.new("BillboardGui")
+                                EspBillBoard.Adornee = v.Character:WaitForChild(_G.AimPart, math.huge)
+                                EspBillBoard.Name = v.Name
+                                EspBillBoard.Size = UDim2.new(0, 100, 0, 150)
+                                EspBillBoard.StudsOffset = Vector3.new(0, 1, 0)
+                                EspBillBoard.AlwaysOnTop = true
+                                EspBillBoard.Parent = Current_Player_ESP_Folder
+                                
+                                local BillBoardText = Instance.new("TextLabel")
+                                BillBoardText.BackgroundTransparency = 1
+                                BillBoardText.Position = UDim2.new(0, 0, 0, -50)
+                                BillBoardText.Size = UDim2.new(0, 100, 0, 100)
+                                BillBoardText.Font = Enum.Font.SourceSansSemibold
+                                BillBoardText.TextSize = 20
+                                BillBoardText.TextColor3 = v.TeamColor.Color
+                                BillBoardText.TextStrokeTransparency = 0
+                                BillBoardText.TextYAlignment = Enum.TextYAlignment.Bottom
+                                BillBoardText.Text = v.Name
+                                BillBoardText.ZIndex = 10
+                                BillBoardText.Parent = EspBillBoard
+                            end
+                        end
+
+                    end
+                end
+            end
+        end
+    elseif _G.Player_ESP == false then
+        for i, v in pairs(Current_Player_ESP_Folder:GetChildren()) do
+            v:Destroy()
+        end
+    end
+end)
