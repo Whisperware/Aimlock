@@ -2,7 +2,7 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
-local LOOP_BRING_KEY = Enum.KeyCode.U
+local LOOP_BRING_KEY = Enum.KeyCode.B
 local LOWER_AMOUNT = 1.7
 
 local isLoopBringing = false
