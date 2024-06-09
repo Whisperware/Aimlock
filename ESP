@@ -1,0 +1,152 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Camera = game.Workspace.CurrentCamera
+
+-- Fixed reference size for the text
+local REFERENCE_TEXT_SIZE = 12
+local MIN_SIZE = Vector2.new(50, 50) -- Minimum size for the ESP box
+
+-- Function to clear tags
+local function clearTags(tags)
+    for _, tag in ipairs(tags) do
+        tag.Visible = false
+        tag:Remove()
+    end
+    return {}
+end
+
+-- Function to update tags
+local function updateTags(folder, initialPosition, direction, tags, color)
+    if folder then
+        local itemCount = 0
+        for _, item in ipairs(folder:GetChildren()) do
+            itemCount = itemCount + 1
+            local itemTag = Drawing.new("Text")
+            itemTag.Text = item.Name
+            itemTag.Color = color
+            itemTag.Size = REFERENCE_TEXT_SIZE
+            itemTag.Center = true
+            itemTag.Outline = true
+            itemTag.Position = initialPosition + direction * (itemCount * REFERENCE_TEXT_SIZE)
+            itemTag.Visible = true
+            table.insert(tags, itemTag)
+        end
+    end
+    return tags
+end
+
+local function createESP(player)
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Color = Color3.new(1, 0, 0)  -- Red color
+    box.Thickness = 2
+    box.Transparency = 1
+
+    local nameTag = Drawing.new("Text")
+    nameTag.Visible = false
+    nameTag.Color = Color3.new(1, 1, 1)  -- White color
+    nameTag.Size = REFERENCE_TEXT_SIZE
+    nameTag.Center = true
+    nameTag.Outline = true
+
+    local distanceTag = Drawing.new("Text")
+    distanceTag.Visible = false
+    distanceTag.Color = Color3.new(1, 1, 1)  -- White color
+    distanceTag.Size = REFERENCE_TEXT_SIZE
+    distanceTag.Center = true
+    distanceTag.Outline = true
+
+    local healthBar = Drawing.new("Square")
+    healthBar.Visible = false
+    healthBar.Color = Color3.new(0, 1, 0)  -- Green color
+    healthBar.Thickness = 2
+    healthBar.Transparency = 0.5
+
+    local inventoryTags = {}
+    local armourTags = {}
+
+    local function update()
+        local character = player.Character
+        if character and character:FindFirstChild("HumanoidRootPart") then
+            local rootPart = character.HumanoidRootPart
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local vector, onScreen = Camera:WorldToViewportPoint(rootPart.Position)
+
+            if onScreen then
+                local size = Vector2.new(math.max(2000 / vector.Z, MIN_SIZE.X), math.max(2500 / vector.Z, MIN_SIZE.Y))
+                box.Size = size
+                box.Position = Vector2.new(vector.X - size.X / 2, vector.Y - size.Y / 2)
+                box.Visible = true
+
+                -- Position the nameTag
+                nameTag.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 5)
+                nameTag.Text = player.Name
+                nameTag.Size = math.max(REFERENCE_TEXT_SIZE * (1 / vector.Z), REFERENCE_TEXT_SIZE)
+                nameTag.Visible = true
+
+                -- Position the distanceTag
+                local distance = math.ceil((rootPart.Position - Camera.CFrame.Position).Magnitude / 3)
+                distanceTag.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 5 + REFERENCE_TEXT_SIZE)
+                distanceTag.Text = string.format("%d M", distance)
+                distanceTag.Size = math.max(REFERENCE_TEXT_SIZE * (1 / vector.Z), REFERENCE_TEXT_SIZE)
+                distanceTag.Visible = true
+
+                -- Calculate health bar size based on percentage
+                if humanoid then
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    local healthBarHeight = size.Y * healthPercent
+                    healthBar.Size = Vector2.new(5, healthBarHeight)
+                    healthBar.Position = Vector2.new(vector.X - size.X / 2 - 5, vector.Y + size.Y / 2 - healthBarHeight)
+                    healthBar.Visible = true
+                end
+
+                -- Clear old inventory and armour tags
+                inventoryTags = clearTags(inventoryTags)
+                armourTags = clearTags(armourTags)
+
+                -- Fetch inventory data
+                local inventoryFolder = ReplicatedStorage:FindFirstChild("Players"):FindFirstChild(player.Name):FindFirstChild("Inventory")
+                inventoryTags = updateTags(inventoryFolder, Vector2.new(vector.X, vector.Y - size.Y / 2 - 25), Vector2.new(0, -1), inventoryTags, Color3.new(1, 1, 1))
+
+                -- Fetch armour data
+                local armourFolder = ReplicatedStorage:FindFirstChild("Players"):FindFirstChild(player.Name):FindFirstChild("Clothing")
+                armourTags = updateTags(armourFolder, Vector2.new(vector.X + size.X / 2 + 65, vector.Y - size.Y / 2 - 25), Vector2.new(0, 1), armourTags, Color3.new(1, 1, 0))
+            else
+                box.Visible = false
+                nameTag.Visible = false
+                distanceTag.Visible = false
+                healthBar.Visible = false
+                inventoryTags = clearTags(inventoryTags)
+                armourTags = clearTags(armourTags)
+            end
+        else
+            box.Visible = false
+            nameTag.Visible = false
+            distanceTag.Visible = false
+            healthBar.Visible = false
+            inventoryTags = clearTags(inventoryTags)
+            armourTags = clearTags(armourTags)
+        end
+    end
+
+    RunService.RenderStepped:Connect(update)
+
+    player.CharacterAdded:Connect(function()
+        RunService.RenderStepped:Connect(update)
+    end)
+end
+
+local function onPlayerAdded(player)
+    if player ~= Players.LocalPlayer then
+        createESP(player)
+    end
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= Players.LocalPlayer then
+        createESP(player)
+    end
+end
