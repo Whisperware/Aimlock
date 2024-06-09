@@ -1,0 +1,80 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local LOOP_BRING_KEY = Enum.KeyCode.B
+
+local isLoopBringing = false
+
+local function teleportPlayer(player, destination)
+    if player and destination then
+        player.Character:SetPrimaryPartCFrame(destination)
+    end
+end
+
+local function getCursorPosition()
+    local mouse = Players.LocalPlayer:GetMouse()
+    return mouse and mouse.Hit and mouse.Hit.p
+end
+
+local function findNearestPlayer(position)
+    local nearestPlayer = nil
+    local minDistance = math.huge
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character then
+            local character = player.Character
+            local primaryPart = character and character.PrimaryPart
+            if primaryPart then
+                local distance = (primaryPart.Position - position).magnitude
+                if distance < minDistance then
+                    nearestPlayer = player
+                    minDistance = distance
+                end
+            end
+        end
+    end
+
+    return nearestPlayer
+end
+
+local function loopBring()
+    local localPlayer = Players.LocalPlayer
+    local cursorPosition = getCursorPosition()
+    if cursorPosition then
+        local nearestPlayer = findNearestPlayer(cursorPosition)
+        if nearestPlayer then
+            local headPosition = localPlayer.Character and localPlayer.Character:FindFirstChild("Head") and localPlayer.Character.Head.Position
+            if headPosition then
+                local direction = (cursorPosition - headPosition).unit
+                local distance = (nearestPlayer.Character:GetPrimaryPartCFrame().p - headPosition).magnitude
+                if distance < 6 then
+                    -- If the player is within 6 meters, teleport them 6 meters away from the head
+                    local destination = headPosition + direction * 6
+                    teleportPlayer(nearestPlayer, CFrame.new(destination))
+                    print("Player " .. nearestPlayer.Name .. " has been brought 6 meters away from you.")
+                else
+                    -- Otherwise, teleport them directly in front of the local player
+                    local destination = headPosition + direction * 5 -- 5 meters away from the head
+                    teleportPlayer(nearestPlayer, CFrame.new(destination))
+                    print("Player " .. nearestPlayer.Name .. " has been brought in front of you.")
+                end
+            else
+                warn("Head not found for local player.")
+            end
+        end
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == LOOP_BRING_KEY then
+        isLoopBringing = not isLoopBringing
+        print("Loop bring mode is now " .. (isLoopBringing and "enabled" or "disabled"))
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if isLoopBringing then
+        loopBring()
+    end
+end)
