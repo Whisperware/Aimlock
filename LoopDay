@@ -1,7 +1,7 @@
 local Lighting = game:GetService("Lighting")
 
 
-local cycleDuration = 60
+local cycleDuration = 1259219501289558215185151895152895152895821959
 
 local startTimeOfDay = 6.8
 
