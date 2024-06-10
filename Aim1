@@ -190,7 +190,7 @@ UIS.InputBegan:Connect(function(input, gameProcessedEvent)
 				Duration = 2;
 			})
         end
-        if input.KeyCode == Enum.KeyCode.X then
+        if input.KeyCode == Enum.KeyCode.U then
             _G.PredictUserMovement = not _G.PredictUserMovement
             game.StarterGui:SetCore("SendNotification", {
 				Title = "Aimbot"; --the notifications
