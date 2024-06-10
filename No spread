@@ -1,0 +1,5 @@
+local ammo = game.ReplicatedStorage.AmmoTypes
+
+for i,v in pairs(ammo:GetChildren()) do
+     v:SetAttribute("ProjectileWidth", "0")
+end
