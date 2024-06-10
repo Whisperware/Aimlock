@@ -1,0 +1,77 @@
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SPECTATE_KEY = Enum.KeyCode.P
+local isSpectating = false
+local currentTarget = nil
+local function enableSpectate(player)
+    if not player then
+        return
+    end
+    currentTarget = player
+    isSpectating = true
+    local camera = game.Workspace.CurrentCamera
+    local character = player.Character
+    if not character then
+        return
+    end
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.PlatformStand = true
+    camera.CameraSubject = humanoid
+    camera.CameraType = Enum.CameraType.Custom
+    camera.CameraSubject = character
+end
+local function disableSpectate()
+    isSpectating = false
+    currentTarget = nil
+    local camera = game.Workspace.CurrentCamera
+    camera.CameraType = Enum.CameraType.Custom
+    camera.CameraSubject = Players.LocalPlayer.Character
+end
+local function getNearestPlayerToScreenCenter()
+    local localPlayer = Players.LocalPlayer
+    local camera = game.Workspace.CurrentCamera
+    local screenSize = camera.ViewportSize
+    local screenCenter = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+    local nearestPlayer = nil
+    local minDistance = math.huge
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= localPlayer and player.Character then
+            local character = player.Character
+            local primaryPart = character and character.PrimaryPart
+            if primaryPart then
+                local position, isVisible = camera:WorldToViewportPoint(primaryPart.Position)
+                if isVisible then
+                    local distance = (Vector2.new(position.X, position.Y) - screenCenter).magnitude
+                    if distance < minDistance then
+                        nearestPlayer = player
+                        minDistance = distance
+                    end
+                end
+            end
+        end
+    end
+    return nearestPlayer
+end
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == SPECTATE_KEY then
+        if not isSpectating then
+            local nearestPlayer = getNearestPlayerToScreenCenter()
+            enableSpectate(nearestPlayer)
+            print("Spectating player: " .. (nearestPlayer and nearestPlayer.Name or "None"))
+        else
+            disableSpectate()
+            print("Stopped spectating.")
+        end
+    end
+end)
+RunService.RenderStepped:Connect(function()
+    if isSpectating and currentTarget and currentTarget.Character then
+        local camera = game.Workspace.CurrentCamera
+        local character = currentTarget.Character
+        local primaryPart = character.PrimaryPart
+        if primaryPart then
+            camera.CFrame = CFrame.new(primaryPart.Position + Vector3.new(0, 5, -10), primaryPart.Position)
+        end
+    end
+end)
