@@ -1,7 +1,7 @@
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local SPECTATE_KEY = Enum.KeyCode.P
+local SPECTATE_KEY = Enum.KeyCode.G
 local isSpectating = false
 local currentTarget = nil
 local function enableSpectate(player)
