@@ -1,0 +1,16 @@
+local Lighting = game:GetService("Lighting")
+
+-- Function to remove fog
+local function removeFog()
+    -- Check if there's an Atmosphere object under Lighting
+    local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere")
+    if atmosphere then
+        atmosphere:Destroy() -- If found, destroy it
+        print("Fog removed from the game.")
+    else
+        print("No fog found in the game.")
+    end
+end
+
+-- Call the function to remove fog
+removeFog()
