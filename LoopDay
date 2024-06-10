@@ -1,13 +1,11 @@
 local Lighting = game:GetService("Lighting")
 
+local cycleDuration = 24 -- Full day cycle duration
 
-local cycleDuration = 0
-
-local startTimeOfDay = 6.8
+local startTimeOfDay = 6.8 -- Beginning of the day
 
 -- Calculate the initial time offset
 local initialTimeOffset = (startTimeOfDay / 24) * cycleDuration
-
 
 local function updateLighting(time)
     local timeFraction = time / cycleDuration
