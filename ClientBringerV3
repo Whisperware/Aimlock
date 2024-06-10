@@ -3,7 +3,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local LOOP_BRING_KEY = Enum.KeyCode.B
-local LOWER_AMOUNT = 1.7
+local LOWER_AMOUNT = 1.5
 
 local isLoopBringing = false
 
@@ -18,49 +18,47 @@ local function getCursorPosition()
     return mouse and mouse.Hit and mouse.Hit.p
 end
 
-local function findNearestPlayer(position)
-    local nearestPlayer = nil
-    local minDistance = math.huge
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= Players.LocalPlayer and player.Character then
-            local character = player.Character
-            local primaryPart = character and character.PrimaryPart
-            if primaryPart then
-                local distance = (primaryPart.Position - position).magnitude
-                if distance < minDistance then
-                    nearestPlayer = player
-                    minDistance = distance
-                end
-            end
-        end
-    end
-
-    return nearestPlayer
-end
-
 local function loopBring()
     local localPlayer = Players.LocalPlayer
     local cursorPosition = getCursorPosition()
     if cursorPosition then
-        local nearestPlayer = findNearestPlayer(cursorPosition)
-        if nearestPlayer then
-            local headPosition = localPlayer.Character and localPlayer.Character:FindFirstChild("Head") and localPlayer.Character.Head.Position
-            if headPosition then
-                local direction = (cursorPosition - headPosition).unit
-                local distance = (nearestPlayer.Character:GetPrimaryPartCFrame().p - headPosition).magnitude
-                if distance < 6 then
-                    local destination = headPosition + direction * 6 - Vector3.new(0, LOWER_AMOUNT, 0)
+        local headPosition = localPlayer.Character and localPlayer.Character:FindFirstChild("Head") and localPlayer.Character.Head.Position
+        if headPosition then
+            local cursorDirection = (cursorPosition - headPosition).unit
+            local nearestPlayer = nil
+            local minDistance = math.huge
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= localPlayer and player.Character then
+                    local character = player.Character
+                    local primaryPart = character and character.PrimaryPart
+                    if primaryPart then
+                        local playerDirection = (primaryPart.Position - headPosition).unit
+                        local dotProduct = cursorDirection:Dot(playerDirection)
+                        local fovAngle = math.acos(dotProduct)
+                        local fovLimit = math.rad(60)
+                        if fovAngle <= fovLimit then
+                            local distance = (primaryPart.Position - cursorPosition).magnitude
+                            if distance < minDistance then
+                                nearestPlayer = player
+                                minDistance = distance
+                            end
+                        end
+                    end
+                end
+            end
+            if nearestPlayer then
+                if minDistance < 6 then
+                    local destination = headPosition + cursorDirection * 6 - Vector3.new(0, LOWER_AMOUNT, 0)
                     teleportPlayer(nearestPlayer, CFrame.new(destination))
                     print("Player " .. nearestPlayer.Name .. " has been brought 6 meters away from you and lowered.")
                 else
-                    local destination = headPosition + direction * 5 - Vector3.new(0, LOWER_AMOUNT, 0) -- 5 meters away from the head
+                    local destination = headPosition + cursorDirection * 5 - Vector3.new(0, LOWER_AMOUNT, 0) -- 5 meters away from the head
                     teleportPlayer(nearestPlayer, CFrame.new(destination))
                     print("Player " .. nearestPlayer.Name .. " has been brought in front of you and lowered.")
                 end
-            else
-                warn("Head not found for local player.")
             end
+        else
+            warn("Head not found for local player.")
         end
     end
 end
